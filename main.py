@@ -358,7 +358,6 @@ elif option == "Train Model":
             # -------------------------
             X = df[['Age', 'Gender', 'Treatment_Cost',
                     'Visit_Duration', 'Insurance_Status', 'Readmission_Count']]
-
             X = pd.get_dummies(X, drop_first=True)
             y = df['Recovery_Status']
 
@@ -374,35 +373,76 @@ elif option == "Train Model":
             X_train, X_test, y_train, y_test = train_test_split(
                 X_scaled, y, test_size=0.2, random_state=42)
 
-            # -------------------------
-            # STEP 6: Train Logistic Model
-            # -------------------------
+            # ============================================================
+            # 🔹 MODEL 1: Logistic Regression
+            # ============================================================
+            st.header("▶ Logistic Regression Results")
+
             from sklearn.linear_model import LogisticRegression
-            model = LogisticRegression()
-            model.fit(X_train, y_train)
+            log_model = LogisticRegression()
+            log_model.fit(X_train, y_train)
 
-            # -------------------------
-            # STEP 7: Check Accuracy
-            # -------------------------
-            acc = model.score(X_test, y_test)
+            acc_log = log_model.score(X_test, y_test)
+            st.metric("Accuracy value : ",acc_log)
+            st.success("🎯 Logistic Regression Trained Successfully!")
+            st.metric("Logistic Regression Accuracy", f"{acc_log*100:.2f}%")
 
-            st.success(f"🎉 Model Trained Successfully!")
-            st.metric("Accuracy value : ",acc)
-            st.metric("Accuracy in percent", f"{acc * 100:.2f}%")
+            st.divider()   # visual separator
 
-            # -------------------------
-            # STEP 8: Save Model + Scaler + Encoder
-            # -------------------------
+            # ============================================================
+            # 🔹 MODEL 2: k-NN
+            # ============================================================
+            st.header("▶ k-Nearest Neighbors (k-NN) Results")
+
+            from sklearn.neighbors import KNeighborsClassifier
+            from sklearn.model_selection import cross_val_score
+
+            st.write("📌 Finding best value of K...")
+
+            k_values = range(1, 21)
+            cv_scores = []
+
+            for k in k_values:
+                knn = KNeighborsClassifier(n_neighbors=k)
+                scores = cross_val_score(knn, X_train, y_train, cv=5, scoring='accuracy')
+                cv_scores.append(scores.mean())
+
+            best_k = k_values[cv_scores.index(max(cv_scores))]
+
+            st.write(f"🔍 Best K found: **{best_k}**")
+
+            # Train final KNN
+            knn_model = KNeighborsClassifier(n_neighbors=best_k)
+            knn_model.fit(X_train, y_train)
+
+            acc_knn = knn_model.score(X_test, y_test)
+            st.metric("Accuracy vakue : ",acc_knn)
+            st.success("🤖 KNN Model Trained Successfully!")
+            st.metric("KNN Accuracy", f"{acc_knn*100:.2f}%")
+
+            # ============================================================
+            # SAVE MODELS
+            # ============================================================
             import joblib
             os.makedirs("models", exist_ok=True)
 
-            joblib.dump(model, "models/trained_model.pkl")
+            joblib.dump(log_model, "models/logistic_model.pkl")
+            joblib.dump(knn_model, "models/knn_model.pkl")
             joblib.dump(scaler, "models/scaler.pkl")
             joblib.dump(encoder, "models/label_encoder.pkl")
 
-            st.info("📦 Saved: `trained_model.pkl`, `scaler.pkl`, `label_encoder.pkl`")
+            st.divider()
+            st.info("""
+📦 Saved Models:
+- `logistic_model.pkl`
+- `knn_model.pkl`
+- `scaler.pkl`
+- `label_encoder.pkl`
+""")
+
     else:
         st.error("❌ CSV file not found!")
+
 
 # ----- PREDICT -----
 # elif option == "Predict":
